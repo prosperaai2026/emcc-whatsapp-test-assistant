@@ -45,30 +45,42 @@ const saveMessage = (message) => {
 };
 
 const sendWhatsAppMessage = async (to, text) => {
-    console.log(`Enviando mensagem para ${to}: ${text}`);
-    
-    const apiUrl = process.env.WHATSAPP_API_URL;
+    // Extrair apenas números do destinatário (remove @s.whatsapp.net, etc)
+    const cleanNumber = to.replace(/\D/g, '');
+    console.log(`Enviando mensagem para ${cleanNumber} (original: ${to}): ${text}`);
+
+    let apiUrl = process.env.WHATSAPP_API_URL || '';
+    // Remover barra no final se existir para evitar URL mal formada
+    if (apiUrl.endsWith('/')) {
+        apiUrl = apiUrl.slice(0, -1);
+    }
+
     const apiKey = process.env.WHATSAPP_API_KEY;
     const instance = process.env.WHATSAPP_INSTANCE_NAME;
 
     if (apiUrl && apiKey && instance) {
         try {
-            // Ajustado para o padrão da Evolution API
             const endpoint = `${apiUrl}/message/sendText/${instance}`;
             await axios.post(endpoint, {
-                number: to,
+                number: cleanNumber,
                 text: text
             }, {
-                headers: { 
+                headers: {
                     'apikey': apiKey,
                     'Content-Type': 'application/json'
                 }
             });
         } catch (error) {
-            console.error('Erro ao enviar mensagem para Evolution API:', error.response?.data || error.message);
+            console.error('❌ Erro ao enviar mensagem para Evolution API:');
+            if (error.response) {
+                console.error('Status:', error.response.status);
+                console.error('Corpo da resposta:', JSON.stringify(error.response.data, null, 2));
+            } else {
+                console.error('Mensagem de erro:', error.message);
+            }
         }
     } else {
-        console.warn('Configurações de WhatsApp ausentes (.env)');
+        console.warn('⚠️ Configurações de WhatsApp ausentes (.env)');
     }
 };
 
