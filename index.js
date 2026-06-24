@@ -45,22 +45,28 @@ const saveMessage = (message) => {
 };
 
 const sendWhatsAppMessage = async (to, text) => {
-    // Extrair apenas o número do remetente, lidando com formatos como 55119...:1@s.whatsapp.net
-    const cleanNumber = to.split('@')[0].split(':')[0];
-    console.log(`Enviando mensagem para ${cleanNumber} (original: ${to}): ${text}`);
-
     let apiUrl = process.env.WHATSAPP_API_URL || '';
-    // Remover barra no final se existir para evitar URL mal formada
-    apiUrl = apiUrl.replace(/\/+$/, '');
-
     const apiKey = process.env.WHATSAPP_API_KEY;
     const instance = process.env.WHATSAPP_INSTANCE_NAME;
 
-    if (apiUrl && apiKey && instance) {
+    // 1. URL Inteligente: Garante que o endpoint esteja correto sem duplicar paths
+    apiUrl = apiUrl.replace(/\/+$/, ''); // Remove barras no final
+    let endpoint = apiUrl;
+    if (!apiUrl.includes('/message/sendText')) {
+        endpoint = `${apiUrl}/message/sendText/${instance}`;
+    }
+
+    // 2. Formato de Número Flexível: Mantém o JID completo (@s.whatsapp.net)
+    // se fornecido, para garantir compatibilidade internacional.
+    const number = to;
+
+    console.log(`[Outbound] Enviando para: ${number}`);
+    console.log(`[Outbound] URL: ${endpoint}`);
+
+    if (endpoint && apiKey) {
         try {
-            const endpoint = `${apiUrl}/message/sendText/${instance}`;
             await axios.post(endpoint, {
-                number: cleanNumber,
+                number: number,
                 text: text
             }, {
                 headers: {
@@ -68,18 +74,19 @@ const sendWhatsAppMessage = async (to, text) => {
                     'Content-Type': 'application/json'
                 }
             });
+            console.log(`✅ Mensagem entregue para ${number}`);
         } catch (error) {
-            console.error('❌ Erro ao enviar mensagem para Evolution API:');
+            console.error('❌ Falha na entrega Evolution API:');
+            console.error(`URL tentada: ${endpoint}`);
             if (error.response) {
-                console.error('Status:', error.response.status);
-                console.error('URL Tentada:', error.config?.url);
-                console.error('Corpo da resposta:', JSON.stringify(error.response.data, null, 2));
+                console.error('Status HTTP:', error.response.status);
+                console.error('Resposta da API:', JSON.stringify(error.response.data, null, 2));
             } else {
-                console.error('Mensagem de erro:', error.message);
+                console.error('Erro na requisição:', error.message);
             }
         }
     } else {
-        console.warn('⚠️ Configurações de WhatsApp ausentes (.env)');
+        console.warn('⚠️ Configurações de WhatsApp incompletas no arquivo .env');
     }
 };
 
