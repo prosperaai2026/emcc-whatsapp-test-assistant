@@ -5,6 +5,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const { getChatCompletion } = require('./openaiService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -143,14 +144,22 @@ app.post('/webhook', async (req, res) => {
         console.log(`Mensagem de ${sender}: ${messageText}`);
 
         let responseText = '';
-        const cleanMessage = messageText.toLowerCase().trim();
-
-        if (cleanMessage.includes('agenda')) {
-            responseText = '🗓️ *Agenda EMCC:*\n- Cultos: Domingos às 10h\n- Estudo Bíblico: Quartas às 19h\n- Reunião de Jovens: Sábados às 18h';
-        } else if (cleanMessage.includes('endereço') || cleanMessage.includes('endereco')) {
-            responseText = '📍 *Endereço EMCC:*\nPort Charlotte, Florida\n(Para mais detalhes, consulte nosso site ou Google Maps)';
+        
+        // Tentar obter resposta da IA
+        const aiResponse = await getChatCompletion(messageText);
+        
+        if (aiResponse) {
+            responseText = aiResponse;
         } else {
-            responseText = 'Olá! Recebemos sua mensagem e um de nossos voluntários entrará em contato em breve. 🙏';
+            // Fallback para lógica de palavras-chave se a IA falhar
+            const cleanMessage = messageText.toLowerCase().trim();
+            if (cleanMessage.includes('agenda')) {
+                responseText = '🗓️ *Agenda EMCC:*\n- Cultos: Domingos às 10h\n- Estudo Bíblico: Quartas às 19h\n- Reunião de Jovens: Sábados às 18h';
+            } else if (cleanMessage.includes('endereço') || cleanMessage.includes('endereco')) {
+                responseText = '📍 *Endereço EMCC:*\nPort Charlotte, Florida\n(Para mais detalhes, consulte nosso site ou Google Maps)';
+            } else {
+                responseText = 'Olá! Recebemos sua mensagem e um de nossos voluntários entrará em contato em breve. 🙏';
+            }
         }
 
         // Salvar no histórico
