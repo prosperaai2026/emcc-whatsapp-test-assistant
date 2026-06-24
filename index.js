@@ -45,15 +45,13 @@ const saveMessage = (message) => {
 };
 
 const sendWhatsAppMessage = async (to, text) => {
-    // Extrair apenas números do destinatário (remove @s.whatsapp.net, etc)
-    const cleanNumber = to.replace(/\D/g, '');
+    // Extrair apenas o número do remetente, lidando com formatos como 55119...:1@s.whatsapp.net
+    const cleanNumber = to.split('@')[0].split(':')[0];
     console.log(`Enviando mensagem para ${cleanNumber} (original: ${to}): ${text}`);
 
     let apiUrl = process.env.WHATSAPP_API_URL || '';
     // Remover barra no final se existir para evitar URL mal formada
-    if (apiUrl.endsWith('/')) {
-        apiUrl = apiUrl.slice(0, -1);
-    }
+    apiUrl = apiUrl.replace(/\/+$/, '');
 
     const apiKey = process.env.WHATSAPP_API_KEY;
     const instance = process.env.WHATSAPP_INSTANCE_NAME;
@@ -74,6 +72,7 @@ const sendWhatsAppMessage = async (to, text) => {
             console.error('❌ Erro ao enviar mensagem para Evolution API:');
             if (error.response) {
                 console.error('Status:', error.response.status);
+                console.error('URL Tentada:', error.config?.url);
                 console.error('Corpo da resposta:', JSON.stringify(error.response.data, null, 2));
             } else {
                 console.error('Mensagem de erro:', error.message);
