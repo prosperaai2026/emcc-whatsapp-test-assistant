@@ -61,21 +61,31 @@ const sendWhatsAppMessage = async (to, text) => {
         endpoint = `${apiUrl}/${instance}`;
     }
 
-    // 2. Formato de Número Flexível: Mantém o JID completo (@s.whatsapp.net ou @g.us)
-    // Mas remove o identificador de dispositivo (ex: :1) que causa erro no envio na Evolution API
-    const number = to.includes('@') ? to.replace(/:[0-9]+@/, '@') : to;
+    // 2. Formato de Número Flexível:
+    // Se for contato individual (@s.whatsapp.net), extrai apenas dígitos para compatibilidade agressiva.
+    // Se for grupo (@g.us), mantém o formato sem o identificador de dispositivo (:1).
+    let number = to;
+    if (to.includes('@s.whatsapp.net')) {
+        number = to.split('@')[0].replace(/[^0-9]/g, '');
+    } else {
+        number = to.replace(/:[0-9]+@/, '@');
+    }
+
+    const payload = {
+        number: number,
+        text: text
+    };
 
     console.log(`[Outbound] Enviando para: ${number}`);
     console.log(`[Outbound] URL: ${endpoint}`);
+    console.log(`[Outbound] Payload:`, JSON.stringify(payload, null, 2));
 
     if (endpoint && apiKey) {
         try {
-            await axios.post(endpoint, {
-                number: number,
-                text: text // Campo padrão solicitado
-            }, {
+            await axios.post(endpoint, payload, {
                 headers: {
                     'apikey': apiKey,
+                    'apiKey': apiKey, // Suporte redundante
                     'Content-Type': 'application/json'
                 }
             });
