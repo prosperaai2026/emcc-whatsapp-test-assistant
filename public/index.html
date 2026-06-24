@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMCC WhatsApp Assistant - Dashboard</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .status { display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .online { background: #4caf50; }
+        .offline { background: #f44336; }
+        .log-container { height: 300px; overflow-y: auto; background: #fafafa; border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
+        .log-entry { margin-bottom: 10px; padding: 8px; border-bottom: 1px solid #eee; }
+        .log-entry:last-child { border-bottom: none; }
+        .timestamp { font-size: 0.8em; color: #888; }
+        .sender { font-weight: bold; color: #007bff; }
+        .message { margin-top: 4px; }
+        .response { margin-top: 4px; color: #555; font-style: italic; border-left: 3px solid #ccc; padding-left: 10px; }
+        .actions { display: flex; gap: 10px; margin-top: 20px; }
+        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: white; }
+        button:hover { background: #0056b3; }
+        button.secondary { background: #6c757d; }
+        .last-msgs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dashboard EMCC WhatsApp</h1>
+        
+        <div class="card">
+            <div class="status">
+                <div id="status-dot" class="status-dot offline"></div>
+                <span id="status-text">Status: Desconectado</span>
+            </div>
+        </div>
+
+        <div class="last-msgs">
+            <div class="card">
+                <h3>Última Mensagem Recebida</h3>
+                <div id="last-received">-</div>
+            </div>
+            <div class="card">
+                <h3>Última Resposta Enviada</h3>
+                <div id="last-sent">-</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Histórico de Mensagens</h3>
+            <div id="log" class="log-container">
+                <!-- Log entries will be added here -->
+            </div>
+            <div class="actions">
+                <button onclick="testConnection()">Testar Conexão (Simular "agenda")</button>
+                <button class="secondary" onclick="clearLog()">Limpar Histórico</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                document.getElementById('status-dot').className = 'status-dot ' + (data.status === 'Conectado' ? 'online' : 'offline');
+                document.getElementById('status-text').innerText = 'Status: ' + data.status;
+            } catch (error) {
+                document.getElementById('status-dot').className = 'status-dot offline';
+                document.getElementById('status-text').innerText = 'Status: Erro de Conexão';
+            }
+        }
+
+        async function updateMessages() {
+            try {
+                const response = await fetch('/api/messages');
+                const messages = await response.json();
+                const logDiv = document.getElementById('log');
+                logDiv.innerHTML = '';
+
+                if (messages.length === 0) {
+                    logDiv.innerHTML = '<p style="text-align:center; color:#888;">Nenhuma mensagem no histórico.</p>';
+                    return;
+                }
+
+                messages.reverse().forEach((msg, index) => {
+                    if (index === 0) {
+                        document.getElementById('last-received').innerText = msg.text;
+                        document.getElementById('last-sent').innerText = msg.response;
+                    }
+
+                    const entry = document.createElement('div');
+                    entry.className = 'log-entry';
+                    entry.innerHTML = `
+                        <div class="timestamp">${new Date(msg.timestamp).toLocaleString('pt-BR')}</div>
+                        <div class="sender">${msg.sender}</div>
+                        <div class="message">${msg.text}</div>
+                        <div class="response">${msg.response}</div>
+                    `;
+                    logDiv.appendChild(entry);
+                });
+            } catch (error) {
+                console.error('Erro ao buscar mensagens:', error);
+            }
+        }
+
+        async function testConnection() {
+            try {
+                await fetch('/webhook', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sender: 'Sistema', message: 'agenda' })
+                });
+                updateMessages();
+            } catch (error) {
+                alert('Erro ao testar conexão');
+            }
+        }
+
+        async function clearLog() {
+            if (!confirm('Tem certeza que deseja limpar o histórico?')) return;
+            try {
+                await fetch('/api/clear', { method: 'POST' });
+                updateMessages();
+            } catch (error) {
+                alert('Erro ao limpar histórico');
+            }
+        }
+
+        // Atualizar a cada 5 segundos
+        setInterval(() => {
+            updateStatus();
+            updateMessages();
+        }, 5000);
+
+        // Inicial
+        updateStatus();
+        updateMessages();
+    </script>
+</body>
+</html>
