@@ -56,9 +56,9 @@ const sendWhatsAppMessage = async (to, text) => {
         endpoint = `${apiUrl}/message/sendText/${instance}`;
     }
 
-    // 2. Formato de Número Flexível: Mantém o JID completo (@s.whatsapp.net)
-    // se fornecido, para garantir compatibilidade internacional.
-    const number = to;
+    // 2. Formato de Número Flexível: Mantém o JID completo (@s.whatsapp.net ou @g.us)
+    // Mas remove o identificador de dispositivo (ex: :1) que pode causar erro no envio
+    const number = to.split(':')[0].includes('@') ? to.split(':')[0] : to;
 
     console.log(`[Outbound] Enviando para: ${number}`);
     console.log(`[Outbound] URL: ${endpoint}`);
@@ -67,7 +67,7 @@ const sendWhatsAppMessage = async (to, text) => {
         try {
             await axios.post(endpoint, {
                 number: number,
-                text: text
+                text: text // Campo padrão solicitado
             }, {
                 headers: {
                     'apikey': apiKey,
