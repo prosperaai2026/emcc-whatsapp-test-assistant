@@ -53,13 +53,17 @@ const sendWhatsAppMessage = async (to, text) => {
     // 1. URL Inteligente: Garante que o endpoint esteja correto sem duplicar paths
     apiUrl = apiUrl.replace(/\/+$/, ''); // Remove barras no final
     let endpoint = apiUrl;
+    
     if (!apiUrl.includes('/message/sendText')) {
         endpoint = `${apiUrl}/message/sendText/${instance}`;
+    } else if (!apiUrl.endsWith(`/${instance}`)) {
+        // Se já tem sendText mas falta a instância no final
+        endpoint = `${apiUrl}/${instance}`;
     }
 
     // 2. Formato de Número Flexível: Mantém o JID completo (@s.whatsapp.net ou @g.us)
-    // Mas remove o identificador de dispositivo (ex: :1) que pode causar erro no envio
-    const number = to.split(':')[0].includes('@') ? to.split(':')[0] : to;
+    // Mas remove o identificador de dispositivo (ex: :1) que causa erro no envio na Evolution API
+    const number = to.includes('@') ? to.replace(/:[0-9]+@/, '@') : to;
 
     console.log(`[Outbound] Enviando para: ${number}`);
     console.log(`[Outbound] URL: ${endpoint}`);
