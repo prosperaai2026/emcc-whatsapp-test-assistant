@@ -20,8 +20,8 @@ O assistente responde automaticamente a perguntas frequentes sobre a **agenda** 
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/seu-usuario/emcc-whatsapp-assistant.git
-   cd emcc-whatsapp-assistant
+   git clone https://github.com/seu-usuario/emcc-whatsapp-test-assistant.git
+   cd emcc-whatsapp-test-assistant
    ```
 
 2. Instale as dependências:
