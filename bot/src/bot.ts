@@ -6,8 +6,10 @@ interface Session {
   data: any;
 }
 
-const sessions: Record<string, Session> = {};
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:3000/api';
+const BACKEND_API_URL = (process.env.BACKEND_API_URL || 'http://localhost:3000/api').replace(/\/+$/, '');
+const EVOLUTION_API_URL = (process.env.EVOLUTION_API_URL || 'http://localhost:3005').replace(/\/+$/, '');
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
+const INSTANCE_NAME = process.env.INSTANCE_NAME;
 
 export const processMessage = async (message: any) => {
   const remoteJid = message.key.remoteJid;
@@ -252,10 +254,6 @@ const handleVisitorCity = async (remoteJid: string, text: string) => {
 };
 
 const sendMessage = async (remoteJid: string, text: string) => {
-  const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:3005';
-  const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
-  const INSTANCE_NAME = process.env.INSTANCE_NAME;
-
   console.log(`[BOT SENDING TO ${remoteJid}]: ${text}`);
 
   try {
