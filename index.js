@@ -82,7 +82,7 @@ const sendWhatsAppMessage = async (to, text) => {
 
     if (endpoint && apiKey) {
         try {
-            await axios.post(endpoint, payload, {
+            const response = await axios.post(endpoint, payload, {
                 headers: {
                     'apikey': apiKey,
                     'apiKey': apiKey, // Suporte redundante
@@ -90,14 +90,35 @@ const sendWhatsAppMessage = async (to, text) => {
                 }
             });
             console.log(`✅ Mensagem entregue para ${number}`);
+            console.log(`Resposta Evolution API:`, JSON.stringify(response.data, null, 2));
+            
+            // Salvar última resposta para debug
+            lastOutboundResponse = {
+                timestamp: new Date().toISOString(),
+                endpoint,
+                payload,
+                response: response.data,
+                status: 'success'
+            };
         } catch (error) {
             console.error('❌ Falha na entrega Evolution API:');
             console.error(`URL tentada: ${endpoint}`);
+            
+            lastOutboundResponse = {
+                timestamp: new Date().toISOString(),
+                endpoint,
+                payload,
+                status: 'error'
+            };
+
             if (error.response) {
                 console.error('Status HTTP:', error.response.status);
                 console.error('Resposta da API:', JSON.stringify(error.response.data, null, 2));
+                lastOutboundResponse.response = error.response.data;
+                lastOutboundResponse.httpStatus = error.response.status;
             } else {
                 console.error('Erro na requisição:', error.message);
+                lastOutboundResponse.error = error.message;
             }
         }
     } else {
@@ -105,9 +126,20 @@ const sendWhatsAppMessage = async (to, text) => {
     }
 };
 
+let lastOutboundResponse = null;
+
 // Rotas da API para o Dashboard
 app.get('/api/status', (req, res) => {
-    res.json({ status: 'Online', uptime: process.uptime() });
+    res.json({ 
+        status: 'Online', 
+        uptime: process.uptime(),
+        whatsappConfigured: !!(process.env.WHATSAPP_API_URL && process.env.WHATSAPP_API_KEY),
+        openaiConfigured: !!process.env.OPENAI_API_KEY
+    });
+});
+
+app.get('/api/debug/last-outbound', (req, res) => {
+    res.json(lastOutboundResponse || { message: 'Nenhuma mensagem enviada ainda nesta sessão.' });
 });
 
 app.get('/api/messages', (req, res) => {
