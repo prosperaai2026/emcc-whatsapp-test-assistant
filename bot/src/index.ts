@@ -1,8 +1,8 @@
-import express from 'express';
 import dotenv from 'dotenv';
-import { handleWebhook } from './webhook.js';
-
 dotenv.config();
+
+import express from 'express';
+import { handleWebhook } from './webhook.js';
 
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;

@@ -3,11 +3,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openai: any = null;
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export const interpretIntent = async (text: string) => {
+  if (!openai) {
+    console.warn('OpenAI API Key not configured. AI intent interpretation disabled.');
+    return 'UNKNOWN';
+  }
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',

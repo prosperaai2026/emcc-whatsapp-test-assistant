@@ -53,6 +53,8 @@ const handleMainMenu = async (remoteJid: string, text: string, pushName: string)
     intent = 'VISITOR';
   } else if (normalizedText.includes('5') || normalizedText.includes('líder') || normalizedText.includes('falar')) {
     intent = 'TALK_TO_LEADER';
+  } else if (normalizedText.includes('relatório') || normalizedText.includes('relatorio')) {
+    intent = 'SEND_WEEKLY_REPORT';
   } else if (normalizedText.length > 3) {
     intent = await interpretIntent(text) || '';
   }
@@ -75,8 +77,69 @@ const handleMainMenu = async (remoteJid: string, text: string, pushName: string)
     case 'TALK_TO_LEADER':
       await sendMessage(remoteJid, '🤝 Um de nossos líderes entrará em contato em breve. Se for urgente, entre em contato com a secretaria da igreja.');
       break;
+    case 'SEND_WEEKLY_REPORT':
+      await handleWeeklyReportRequest(remoteJid);
+      break;
     default:
       await handleUnknownIntent(remoteJid, text, pushName);
+  }
+};
+
+const handleWeeklyReportRequest = async (remoteJid: string) => {
+  const phone = remoteJid.split('@')[0];
+  try {
+    const response = await axios.get(`${BACKEND_API_URL}/leaders?active=true`);
+    const leaders = response.data.data;
+    const isLeader = leaders.some((l: any) => l.phone.includes(phone) || phone.includes(l.phone.replace(/\D/g, '')));
+    
+    if (!isLeader) {
+      await sendMessage(remoteJid, '❌ Desculpe, esta função é restrita para a liderança cadastrada.');
+      return;
+    }
+
+    await sendMessage(remoteJid, '📊 Gerando relatório semanal... um momento.');
+    await sendWeeklyReportToJid(remoteJid);
+  } catch (error) {
+    console.error('Error checking leader status:', error);
+    await sendMessage(remoteJid, 'Ops, tive um erro ao verificar sua permissão.');
+  }
+};
+
+export const sendWeeklyReportToAllLeaders = async () => {
+  try {
+    const response = await axios.get(`${BACKEND_API_URL}/leaders?active=true`);
+    const leaders = response.data.data;
+    for (const leader of leaders) {
+      const jid = `${leader.phone.replace(/\D/g, '')}@s.whatsapp.net`;
+      await sendWeeklyReportToJid(jid);
+    }
+  } catch (error) {
+    console.error('Error sending report to all leaders:', error);
+  }
+};
+
+const sendWeeklyReportToJid = async (jid: string) => {
+  try {
+    const response = await axios.get(`${BACKEND_API_URL}/reports/weekly`);
+    if (response.data.success) {
+      const report = response.data.data;
+      let text = `📊 *RELATÓRIO SEMANAL PROSPERA AI*\n\n`;
+      text += `📅 Período: ${report.period}\n\n`;
+      text += `👥 *Novos Visitantes:* ${report.visitors_count}\n`;
+      text += `🙏 *Pedidos de Oração:* ${report.prayer_requests_count}\n`;
+      text += `📅 *Eventos na Semana:* ${report.events_count}\n`;
+      text += `🎂 *Aniversariantes:* ${report.birthdays_count}\n\n`;
+      
+      if (report.visitors && report.visitors.length > 0) {
+        text += `*Visitantes:* ${report.visitors.map((v: any) => v.name).join(', ')}\n\n`;
+      }
+      
+      text += `_Este é um resumo automático para auxiliar a liderança._`;
+      await sendMessage(jid, text);
+    }
+  } catch (error) {
+    console.error('Error fetching weekly report:', error);
+    await sendMessage(jid, 'Ops, tive um erro ao carregar o relatório semanal.');
   }
 };
 
@@ -189,9 +252,11 @@ const handleVisitorCity = async (remoteJid: string, text: string) => {
 };
 
 const sendMessage = async (remoteJid: string, text: string) => {
-  const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
+  const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:3005';
   const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
   const INSTANCE_NAME = process.env.INSTANCE_NAME;
+
+  console.log(`[BOT SENDING TO ${remoteJid}]: ${text}`);
 
   try {
     await axios.post(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
