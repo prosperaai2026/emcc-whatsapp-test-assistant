@@ -11,6 +11,7 @@ import prayersRouter from './routes/prayers';
 import leadersRouter from './routes/leaders';
 import birthdaysRouter from './routes/birthdays';
 import knowledgeBaseRouter from './routes/knowledge-base';
+import webhookRouter from "./routes/webhook";
 
 dotenv.config();
 
@@ -61,6 +62,7 @@ app.use('/api/birthdays', birthdaysRouter);
 
 // Knowledge base (FAQ)
 app.use('/api/knowledge-base', knowledgeBaseRouter);
+app.use("/api/whatsapp/webhook", webhookRouter);
 
 // Weekly report route
 app.get('/api/reports/weekly', (_req, res) => {
