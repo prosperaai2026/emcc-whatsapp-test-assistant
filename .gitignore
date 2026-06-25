@@ -1,5 +1,9 @@
-node_modules
+node_modules/
 .env
-data/messages.json
-/tmp/emcc-assistant.log
-*.png
+dist/
+.next/
+*.db
+data/
+/tmp/
+*.log
+.DS_Store
