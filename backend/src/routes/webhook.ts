@@ -15,11 +15,21 @@ router.post('/', async (req: Request, res: Response) => {
                  message?.text || '';
     const pushName = message?.pushName || '';
 
-    // Encaminhar para o bot processar (via service ou HTTP call)
-    // Por enquanto, apenas log e acknowledge
+    // Encaminhar para o bot processar
+    const botWebhookUrl = process.env.BOT_WEBHOOK_URL || 'http://localhost:3006/webhook';
+    try {
+      await fetch(botWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(message)
+      });
+    } catch (e) {
+      console.error('[Webhook] Erro ao encaminhar para o bot:', e);
+    }
+
     res.status(200).json({ 
       success: true, 
-      message: 'Mensagem recebida',
+      message: 'Mensagem recebida e encaminhada',
       data: { from, text, pushName }
     });
   } catch (error) {
